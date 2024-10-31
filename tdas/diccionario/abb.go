@@ -1,10 +1,5 @@
 package diccionario
 
-//ANOTACIONES
-//Considerar switch en funcion de busqueda
-//Crear una funcion Swap que cambie el nodo al que apunta un  puntero puntero
-//Cambiar buscar para que reciba un puntero a puntero
-
 type funcComparacion[K comparable] func(K, K) int
 
 type nodoAbb[K comparable, V any] struct {
@@ -28,18 +23,6 @@ func crearNodoABB[K comparable, V any]() *nodoAbb[K, V] {
 
 	return &nodoAbb[K, V]{}
 }
-
-// func(ab *nodoAbb[K,V]) cambiarHijo(valorAbb **nodoAbb[K,V])  {}
-/*func (ab *nodoAbb[K, V]) buscar(clave K, comp funcComparacion[K]) **nodoAbb[K, V] {
-	if ab == nil || comp(clave, ab.clave) == 0 {
-		println(&ab)
-		return &ab
-	} else if comp(clave, ab.clave) < 0 {
-		return ab.izq.buscar(clave, comp)
-	} else {
-		return ab.der.buscar(clave, comp)
-	}
-}*/
 
 func buscar[K comparable, V any](ab **nodoAbb[K, V], comp funcComparacion[K], clave K) **nodoAbb[K, V] {
 	if *ab == nil || comp(clave, (*ab).clave) == 0 {
@@ -78,6 +61,7 @@ func (dic *abb[K, V]) Borrar(clave K) V {
 		dic.Borrar(nodoPrevio.clave)
 		(*nodo).clave, (*nodo).dato = nodoPrevio.clave, nodoPrevio.dato
 	}
+
 	dic.cantidad--
 	return dato
 
