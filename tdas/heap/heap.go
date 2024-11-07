@@ -13,11 +13,12 @@ func CrearHeap[T comparable](funcion_cmp func(T, T) int) ColaPrioridad[T] {
 }
 
 func CrearHeapArr[T comparable](arreglo []T, funcion_cmp func(T, T) int) ColaPrioridad[T] {
-    h := &heap[T]{datos: append([]T{}, arreglo...), cantidad: len(arreglo), cmp: funcion_cmp}
-    for i := h.cantidad/2 - 1; i >= 0; i-- {
-        h.hundir(i)
-    }
-    return h
+	h := &heap[T]{datos: make([]T, len(arreglo)), cantidad: len(arreglo), cmp: funcion_cmp}
+	copy(h.datos, arreglo)
+	for i := h.cantidad/2 - 1; i >= 0; i-- {
+		h.hundir(i)
+	}
+	return h
 }
 
 func (h *heap[T]) EstaVacia() bool {
@@ -62,7 +63,7 @@ func HeapSort[T comparable](elementos []T, funcion_cmp func(T, T) int) []T {
     return h.datos
 }
 
-//Auxiliares
+//Auxiliares 
 func (h *heap[T]) darSoporte(i int, v T) {
     for i > 0 && h.cmp(h.datos[(i-1)/2], v) < 0 {
         h.datos[i] = h.datos[(i-1)/2]
