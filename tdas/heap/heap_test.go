@@ -1,8 +1,8 @@
 package cola_prioridad_test
 
 import (
-	"testing"
 	"tdas/heap"
+	"testing"
 )
 
 func cmpInt(a, b int) int {
