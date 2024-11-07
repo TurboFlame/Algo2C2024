@@ -9,12 +9,12 @@ type heap[T comparable] struct {
 }
 
 func CrearHeap[T comparable](funcion_cmp func(T, T) int) ColaPrioridad[T] {
-    return &heap[T]{datos: make([]T, 1), cantidad: 0, cmp: funcion_cmp}
+    return &heap[T]{datos: make([]T, 0), cantidad: 0, cmp: funcion_cmp}
 }
 
 func CrearHeapArr[T comparable](arreglo []T, funcion_cmp func(T, T) int) ColaPrioridad[T] {
     h := &heap[T]{datos: append([]T{}, arreglo...), cantidad: len(arreglo), cmp: funcion_cmp}
-    for i := h.cantidad / 2; i > 0; i-- {
+    for i := h.cantidad/2 - 1; i >= 0; i-- {
         h.hundir(i)
     }
     return h
@@ -25,25 +25,26 @@ func (h *heap[T]) EstaVacia() bool {
 }
 
 func (h *heap[T]) Encolar(v T) {
+    h.datos = append(h.datos, v)
     h.cantidad++
-    h.darSoporte(h.cantidad, v)
+    h.darSoporte(h.cantidad - 1, v)
 }
 
 func (h *heap[T]) VerMax() T {
     if h.EstaVacia() {
         panic("La cola esta vacia")
     }
-    return h.dato(1)
+    return h.datos[0]
 }
 
 func (h *heap[T]) Desencolar() T {
     if h.EstaVacia() {
         panic("La cola esta vacia")
     }
-    max := h.dato(1)
-    h.intercambiar(1, h.cantidad)
+    max := h.datos[0]
+    h.intercambiar(0, h.cantidad-1)
     h.cantidad--
-    h.hundir(1)
+    h.hundir(0)
     return max
 }
 
@@ -53,37 +54,33 @@ func (h *heap[T]) Cantidad() int {
 
 func HeapSort[T comparable](elementos []T, funcion_cmp func(T, T) int) []T {
     h := CrearHeapArr(elementos, funcion_cmp).(*heap[T])
-    for i := h.cantidad; i > 1; i-- {
-        h.intercambiar(1, i)
+    for i := h.cantidad - 1; i > 0; i-- {
+        h.intercambiar(0, i)
         h.cantidad--
-        h.hundir(1)
+        h.hundir(0)
     }
-    return h.datos[1:]
+    return h.datos
 }
 
-func (h *heap[T]) dato(i int) T {
-    return h.datos[i]
-}
-
+//Auxiliares
 func (h *heap[T]) darSoporte(i int, v T) {
-    h.datos = append(h.datos, v)
-    for i > 1 && h.cmp(h.dato(i/2), v) < 0 {
-        h.datos[i] = h.dato(i/2)
-        i /= 2
+    for i > 0 && h.cmp(h.datos[(i-1)/2], v) < 0 {
+        h.datos[i] = h.datos[(i-1)/2]
+        i = (i - 1) / 2
     }
     h.datos[i] = v
 }
 
 func (h *heap[T]) hundir(i int) {
-    v := h.dato(i)
-    for k := 2 * i; k <= h.cantidad; k *= 2 {
-        if k < h.cantidad && h.cmp(h.dato(k), h.dato(k+1)) < 0 {
+    v := h.datos[i]
+    for k := 2*i + 1; k < h.cantidad; k = 2*k + 1 {
+        if k+1 < h.cantidad && h.cmp(h.datos[k], h.datos[k+1]) < 0 {
             k++
         }
-        if h.cmp(v, h.dato(k)) >= 0 {
+        if h.cmp(v, h.datos[k]) >= 0 {
             break
         }
-        h.datos[i] = h.dato(k)
+        h.datos[i] = h.datos[k]
         i = k
     }
     h.datos[i] = v
