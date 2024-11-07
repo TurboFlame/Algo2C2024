@@ -39,7 +39,7 @@ func TestDiccionarioOrdenadoClaveDefault(t *testing.T) {
 	require.PanicsWithValue(t, "La clave no pertenece al diccionario", func() { dic.Obtener("") })
 	require.PanicsWithValue(t, "La clave no pertenece al diccionario", func() { dic.Borrar("") })
 
-	dicNum := TDADiccionario.CrearHash[int, string]()
+	dicNum := TDADiccionario.CrearABB[int, string](func(a int, b int) int { return a - b })
 	require.False(t, dicNum.Pertenece(0))
 	require.PanicsWithValue(t, "La clave no pertenece al diccionario", func() { dicNum.Obtener(0) })
 	require.PanicsWithValue(t, "La clave no pertenece al diccionario", func() { dicNum.Borrar(0) })
@@ -213,7 +213,7 @@ func TestConClavesNumericasDiccionarioOrdenado(t *testing.T) {
 	require.EqualValues(t, valor, dic.Borrar(clave))
 	require.False(t, dic.Pertenece(clave))
 }
-func TestClaveVaciaDiccionarioVacio(t *testing.T) {
+func TestClaveVaciaDiccionarioOrdenado(t *testing.T) {
 	t.Log("Guardamos una clave vacía (i.e. \"\") y deberia funcionar sin problemas")
 	dic := TDADiccionario.CrearABB[string, string](func(a string, b string) int { return strings.Compare(a, b) })
 	clave := ""
@@ -244,13 +244,23 @@ func TestIteradorInternoClavesDiccionarioOrdenado(t *testing.T) {
 	})
 
 	require.EqualValues(t, 3, cantidad)
-	require.NotEqualValues(t, -1, buscar(cs[0], claves))
-	require.NotEqualValues(t, -1, buscar(cs[1], claves))
-	require.NotEqualValues(t, -1, buscar(cs[2], claves))
+	require.NotEqualValues(t, -1, buscarClave(cs[0], claves))
+	require.NotEqualValues(t, -1, buscarClave(cs[1], claves))
+	require.NotEqualValues(t, -1, buscarClave(cs[2], claves))
 	require.NotEqualValues(t, cs[0], cs[1])
 	require.NotEqualValues(t, cs[0], cs[2])
 	require.NotEqualValues(t, cs[2], cs[1])
+
 }
+func buscarClave(clave string, claves []string) int {
+	for i, c := range claves {
+		if c == clave {
+			return i
+		}
+	}
+	return -1
+}
+
 func TestIteradorInternoValoresDiccionarioOrdenado(t *testing.T) {
 	t.Log("Valida que los datos sean recorridas correctamente (y una única vez) con el iterador interno")
 	clave1 := "Gato"
@@ -327,6 +337,7 @@ func TestVolumenIteradorCorteDiccionarioOrdenado(t *testing.T) {
 		}
 		if c%100 == 0 {
 			seguirEjecutando = false
+
 			return false
 		}
 		return true
@@ -335,4 +346,152 @@ func TestVolumenIteradorCorteDiccionarioOrdenado(t *testing.T) {
 	require.False(t, seguirEjecutando, "Se tendría que haber encontrado un elemento que genere el corte")
 	require.False(t, siguioEjecutandoCuandoNoDebia,
 		"No debería haber seguido ejecutando si encontramos un elemento que hizo que la iteración corte")
+}
+
+func TestIterarDiccionarioOrdenado(t *testing.T) {
+	t.Log("Guarda muchos elementos y comprueba que se iteren de forma ordenada")
+	dic := TDADiccionario.CrearABB[int, int](func(a int, b int) int { return a - b })
+	for i := 0; i < 500; i++ {
+		dic.Guardar(i, i)
+	}
+	anterior := 0
+	dic.Iterar(func(clave int, valor int) bool {
+		require.True(t, clave >= anterior)
+		anterior = clave
+		return true
+	})
+}
+
+func TestIterarRango(t *testing.T) {
+	t.Log("Itera con un rango especificado. Testea que los elementos iterados esten dentro de ese rango")
+	dic := TDADiccionario.CrearABB[int, int](func(a int, b int) int { return a - b })
+	desde := 200
+	hasta := 300
+	for i := 0; i < 500; i++ {
+		dic.Guardar(i, i)
+	}
+	dic.IterarRango(&desde, &hasta, func(clave int, valor int) bool {
+		require.True(t, clave >= desde, "El diccionario itero sobre un elemento menor al rango")
+		require.True(t, clave <= hasta, "El diccionario itero sobre un elemento menor al rango")
+		return true
+	})
+}
+func TestIterarRangoNulo(t *testing.T) {
+	t.Log("Revisa que al iterarse con valores nulos se itere una vez por elemento")
+	dic := TDADiccionario.CrearABB[int, int](func(a int, b int) int { return a - b })
+	cantElementos := 500
+	for i := 0; i < cantElementos; i++ {
+		dic.Guardar(i, i)
+	}
+	contador := 0
+	dic.IterarRango(nil, nil, func(clave int, valor int) bool {
+		contador++
+		return true
+	})
+	require.True(t, contador == cantElementos, "IteradorRango no itero una vez por elemento")
+}
+
+func TestIteradorNoLlegaAlFinalDiccionarioOrdenado(t *testing.T) {
+	t.Log("Crea un iterador y no lo avanza. Luego crea otro iterador y lo avanza.")
+	dic := TDADiccionario.CrearABB[string, string](func(a string, b string) int { return strings.Compare(a, b) })
+	claves := []string{"A", "B", "C"}
+	dic.Guardar(claves[0], "")
+	dic.Guardar(claves[1], "")
+	dic.Guardar(claves[2], "")
+
+	dic.Iterador()
+	iter2 := dic.Iterador()
+	iter2.Siguiente()
+	iter3 := dic.Iterador()
+	primero, _ := iter3.VerActual()
+	iter3.Siguiente()
+	segundo, _ := iter3.VerActual()
+	iter3.Siguiente()
+	tercero, _ := iter3.VerActual()
+	iter3.Siguiente()
+	require.False(t, iter3.HaySiguiente())
+	require.NotEqualValues(t, primero, segundo)
+	require.NotEqualValues(t, tercero, segundo)
+	require.NotEqualValues(t, primero, tercero)
+	require.NotEqualValues(t, -1, buscarClave(primero, claves))
+	require.NotEqualValues(t, -1, buscarClave(segundo, claves))
+	require.NotEqualValues(t, -1, buscarClave(tercero, claves))
+}
+
+func TestIterarDiccionarioOrdenadoVacio(t *testing.T) {
+	t.Log("Iterar sobre diccionario vacio es simplemente tenerlo al final")
+	dic := TDADiccionario.CrearABB[int, int](func(a int, b int) int { return a - b })
+	iter := dic.Iterador()
+	require.False(t, iter.HaySiguiente())
+	require.PanicsWithValue(t, "El iterador termino de iterar", func() { iter.VerActual() })
+	require.PanicsWithValue(t, "El iterador termino de iterar", func() { iter.Siguiente() })
+}
+
+func TestIteradorDiccionarioOrdenado(t *testing.T) {
+	t.Log("Crea un iterador, guarda muchos elementos y revisa que se recorran los elementos de forma ordenada y se itere cada uno una vez")
+	dic := TDADiccionario.CrearABB[int, int](func(a int, b int) int { return a - b })
+
+	cantElementos := 500
+	for i := 0; i < cantElementos; i++ {
+		dic.Guardar(i, i)
+	}
+	it := dic.Iterador()
+	anterior := 0
+	contadorElementos := 0
+	for it.HaySiguiente() {
+		clave, _ := it.VerActual()
+		require.True(t, clave >= anterior)
+		anterior = clave
+		contadorElementos++
+		it.Siguiente()
+	}
+	require.EqualValues(t, cantElementos, contadorElementos)
+}
+func TestIteradorRangoDiccionarioOrdenado(t *testing.T) {
+	t.Log("Crea un iterador, guarda muchos elementos y revisa que los elementos iterados esten dentro del rango ingresado")
+	desde := 200
+	hasta := 300
+	cantElementos := 500
+	dic := TDADiccionario.CrearABB[int, int](func(a int, b int) int { return a - b })
+
+	for i := 0; i < cantElementos; i++ {
+		dic.Guardar(i, i)
+	}
+
+	it := dic.IteradorRango(&desde, &hasta)
+	elementosIterados := 0
+	for it.HaySiguiente() {
+		clave, _ := it.VerActual()
+		require.True(t, clave >= desde && clave <= hasta)
+		elementosIterados++
+		it.Siguiente()
+	}
+	require.EqualValues(t, elementosIterados, 101)
+
+}
+
+func TestIteradorInternoPruebaEspecifica(t *testing.T) {
+	dic := TDADiccionario.CrearABB[int, int](func(a int, b int) int { return a - b })
+	for i := 1; i <= 7; i++ {
+		dic.Guardar(i, i)
+	}
+	desde := 2
+	hasta := 5
+	it := dic.IteradorRango(&desde, &hasta)
+	contador := 0
+	for it.HaySiguiente() {
+		it.Siguiente()
+		contador++
+	}
+	contador2 := 0
+	contador3 := 2
+	dic.IterarRango(&desde, &hasta, func(clave int, dato int) bool {
+		require.True(t, clave == contador3)
+		contador3++
+		contador2++
+
+		return true
+	})
+	require.EqualValues(t, 4, contador2)
+	require.EqualValues(t, 4, contador2)
 }

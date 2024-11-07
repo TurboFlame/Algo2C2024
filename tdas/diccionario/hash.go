@@ -40,19 +40,19 @@ type hash[V any, K comparable] struct {
 // Busca el primer espacio ocupado con la misma clave o el primer espacio vacio.
 // Si no lo encuentra, busca en el siguiente elemento del array.
 // Devuelve una  celda ocupada si la  clave ya esta en el array, vacia si la clave no esta.
-func (dic *hash[V, K]) Buscar(claveHashed int, clave K) *celda[V, K] {
+func (dic *hash[V, K]) buscar(claveHashed int, clave K) *celda[V, K] {
 
 	estado := dic.elementos[claveHashed].estado
 	if estado == VACIO || (clave == dic.elementos[claveHashed].clave && estado != BORRADO) {
 		return &dic.elementos[claveHashed]
 	} else {
-		return dic.Buscar((claveHashed+1)%(len(dic.elementos)), clave)
+		return dic.buscar((claveHashed+1)%(len(dic.elementos)), clave)
 	}
 }
 
 func (dic *hash[V, K]) Guardar(clave K, dato V) {
 	claveHashed := funcionHash[K](clave, len(dic.elementos))
-	celda := dic.Buscar(claveHashed, clave)
+	celda := dic.buscar(claveHashed, clave)
 
 	//Si la clave no pertenecia al diccionario, aumenta la cantidad de elementos
 	if celda.estado == VACIO {
@@ -71,13 +71,13 @@ func (dic *hash[V, K]) Guardar(clave K, dato V) {
 
 func (dic *hash[V, K]) Pertenece(clave K) bool {
 	claveHashed := funcionHash[K](clave, len(dic.elementos))
-	celda := dic.Buscar(claveHashed, clave)
+	celda := dic.buscar(claveHashed, clave)
 	return celda.estado == OCUPADO
 }
 
 func (dic *hash[V, K]) Obtener(clave K) V {
 	claveHashed := funcionHash[K](clave, len(dic.elementos))
-	celda := dic.Buscar(claveHashed, clave)
+	celda := dic.buscar(claveHashed, clave)
 	if celda.estado == VACIO {
 		panic("La clave no pertenece al diccionario")
 	}
@@ -85,7 +85,7 @@ func (dic *hash[V, K]) Obtener(clave K) V {
 }
 func (dic *hash[V, K]) Borrar(clave K) V {
 	claveHashed := funcionHash[K](clave, len(dic.elementos))
-	celda := dic.Buscar(claveHashed, clave)
+	celda := dic.buscar(claveHashed, clave)
 	if celda.estado == VACIO {
 		panic("La clave no pertenece al diccionario")
 	}
