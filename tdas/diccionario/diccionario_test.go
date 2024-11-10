@@ -451,8 +451,8 @@ func TestIterarDiccionarioVacio(t *testing.T) {
 	dic := TDADiccionario.CrearHash[string, int]()
 	iter := dic.Iterador()
 	require.False(t, iter.HaySiguiente())
-	require.PanicsWithValue(t, "El iterador termino de iterar", func() { iter.VerActual() })
-	require.PanicsWithValue(t, "El iterador termino de iterar", func() { iter.Siguiente() })
+	require.PanicsWithValue(t, "El iterador termino de iterarArbol", func() { iter.VerActual() })
+	require.PanicsWithValue(t, "El iterador termino de iterarArbol", func() { iter.Siguiente() })
 }
 
 func TestDiccionarioIterar(t *testing.T) {
@@ -492,8 +492,8 @@ func TestDiccionarioIterar(t *testing.T) {
 	iter.Siguiente()
 
 	require.False(t, iter.HaySiguiente())
-	require.PanicsWithValue(t, "El iterador termino de iterar", func() { iter.VerActual() })
-	require.PanicsWithValue(t, "El iterador termino de iterar", func() { iter.Siguiente() })
+	require.PanicsWithValue(t, "El iterador termino de iterarArbol", func() { iter.VerActual() })
+	require.PanicsWithValue(t, "El iterador termino de iterarArbol", func() { iter.Siguiente() })
 }
 
 func TestIteradorNoLlegaAlFinal(t *testing.T) {
@@ -542,8 +542,8 @@ func TestPruebaIterarTrasBorrados(t *testing.T) {
 	iter := dic.Iterador()
 
 	require.False(t, iter.HaySiguiente())
-	require.PanicsWithValue(t, "El iterador termino de iterar", func() { iter.VerActual() })
-	require.PanicsWithValue(t, "El iterador termino de iterar", func() { iter.Siguiente() })
+	require.PanicsWithValue(t, "El iterador termino de iterarArbol", func() { iter.VerActual() })
+	require.PanicsWithValue(t, "El iterador termino de iterarArbol", func() { iter.Siguiente() })
 	dic.Guardar(clave1, "A")
 	iter = dic.Iterador()
 

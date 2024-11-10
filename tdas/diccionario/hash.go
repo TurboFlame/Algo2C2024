@@ -139,7 +139,7 @@ func (iterador *iteradorHash[K, V]) HaySiguiente() bool {
 }
 func (iterador *iteradorHash[K, V]) VerActual() (K, V) {
 	if !iterador.HaySiguiente() {
-		panic("El iterador termino de iterar")
+		panic("El iterador termino de iterarArbol")
 	}
 	return iterador.hash.elementos[iterador.indice].clave, iterador.hash.elementos[iterador.indice].valor
 }
@@ -147,7 +147,7 @@ func (iterador *iteradorHash[K, V]) VerActual() (K, V) {
 // Si el indice actual es un valor valido, busca el siguiente valor ocupado.
 func (iterador *iteradorHash[K, V]) Siguiente() {
 	if !iterador.HaySiguiente() {
-		panic("El iterador termino de iterar")
+		panic("El iterador termino de iterarArbol")
 	}
 	iterador.indice++
 	iterador.indice = iterador.hash.buscarOcupado(iterador.indice)
