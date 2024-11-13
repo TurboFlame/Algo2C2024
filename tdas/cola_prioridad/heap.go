@@ -6,7 +6,7 @@ const (
 	LIMITE_REDIMENSION = 4
 )
 
-type fcmpHeap[K any] func(K, K) int
+type fcmpHeap[T any] func(T, T) int
 
 type heap[T comparable] struct {
 	datos    []T
@@ -21,9 +21,7 @@ func CrearHeap[T comparable](funcion_cmp func(T, T) int) ColaPrioridad[T] {
 func CrearHeapArr[T comparable](arreglo []T, funcion_cmp func(T, T) int) ColaPrioridad[T] {
 	h := &heap[T]{datos: make([]T, len(arreglo)), cantidad: len(arreglo), cmp: funcion_cmp}
 	copy(h.datos, arreglo)
-	for i := h.cantidad/2 - 1; i >= 0; i-- {
-		h.downheap(i)
-	}
+	heapify(h.datos, h.cmp)
 	return h
 }
 
@@ -32,12 +30,16 @@ func (h *heap[T]) EstaVacia() bool {
 }
 
 func (h *heap[T]) Encolar(v T) {
-	if h.cantidad == len(h.datos) {
-		h.redimensionar(len(h.datos) * FACTOR_REDIMENSION)
+	if h.cantidad == cap(h.datos) {
+		h.redimensionar(cap(h.datos) * FACTOR_REDIMENSION)
 	}
-	h.datos = append(h.datos, v)
+	if h.cantidad < len(h.datos) {
+		h.datos[h.cantidad] = v
+	} else {
+		h.datos = append(h.datos, v)
+	}
 	h.cantidad++
-	h.upheap(h.cantidad - 1)
+	upHeap(h.datos, h.cantidad-1, h.cmp)
 }
 
 func (h *heap[T]) VerMax() T {
@@ -54,7 +56,7 @@ func (h *heap[T]) Desencolar() T {
 	max := h.datos[0]
 	h.intercambiar(0, h.cantidad-1)
 	h.cantidad--
-	h.downheap(0)
+	downHeap(h.datos, 0, h.cantidad, h.cmp)
 	if h.cantidad > 0 && h.cantidad == len(h.datos)/LIMITE_REDIMENSION {
 		h.redimensionar(len(h.datos) / FACTOR_REDIMENSION)
 	}
@@ -66,38 +68,46 @@ func (h *heap[T]) Cantidad() int {
 }
 
 func HeapSort[T comparable](elementos []T, funcion_cmp func(T, T) int) []T {
-	h := CrearHeapArr(elementos, funcion_cmp).(*heap[T])
-	for i := h.cantidad - 1; i > 0; i-- {
-		h.intercambiar(0, i)
-		h.cantidad--
-		h.downheap(0)
+	cantidad := len(elementos)
+	heapify(elementos, funcion_cmp)
+	for i := cantidad - 1; i > 0; i-- {
+		elementos[0], elementos[i] = elementos[i], elementos[0]
+		downHeap(elementos, 0, i, funcion_cmp)
 	}
-	return h.datos
+	return elementos
 }
 
 // Auxiliares
-func (h *heap[T]) upheap(i int) {
-	v := h.datos[i]
-	for i > 0 && h.cmp(h.datos[(i-1)/2], v) < 0 {
-		h.datos[i] = h.datos[(i-1)/2]
-		i = (i - 1) / 2
+func heapify[T any](arr []T, cmp func(T, T) int) {
+	for i := len(arr)/2 - 1; i >= 0; i-- {
+		downHeap(arr, i, len(arr), cmp)
 	}
-	h.datos[i] = v
 }
 
-func (h *heap[T]) downheap(i int) {
-	v := h.datos[i]
-	for k := 2*i + 1; k < h.cantidad; k = 2*k + 1 {
-		if k+1 < h.cantidad && h.cmp(h.datos[k], h.datos[k+1]) < 0 {
+func upHeap[T any](arr []T, pos_hijo int, cmp func(T, T) int) {
+	if pos_hijo == 0 {
+		return
+	}
+	pos_padre := (pos_hijo - 1) / 2
+	if cmp(arr[pos_padre], arr[pos_hijo]) < 0 {
+		arr[pos_padre], arr[pos_hijo] = arr[pos_hijo], arr[pos_padre]
+		upHeap(arr, pos_padre, cmp)
+	}
+}
+
+func downHeap[T any](arr []T, pos_padre, n int, cmp func(T, T) int) {
+	v := arr[pos_padre]
+	for k := 2*pos_padre + 1; k < n; k = 2*k + 1 {
+		if k+1 < n && cmp(arr[k], arr[k+1]) < 0 {
 			k++
 		}
-		if h.cmp(v, h.datos[k]) >= 0 {
+		if cmp(v, arr[k]) >= 0 {
 			break
 		}
-		h.datos[i] = h.datos[k]
-		i = k
+		arr[pos_padre] = arr[k]
+		pos_padre = k
 	}
-	h.datos[i] = v
+	arr[pos_padre] = v
 }
 
 func (h *heap[T]) intercambiar(i, j int) {

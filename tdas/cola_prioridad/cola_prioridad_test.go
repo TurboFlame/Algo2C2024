@@ -6,7 +6,12 @@ import (
 )
 
 func cmpInt(a, b int) int {
-	return a - b
+	if a < b {
+		return -1
+	} else if a > b {
+		return 1
+	}
+	return 0
 }
 
 func TestCrearHeap(t *testing.T) {
@@ -33,6 +38,18 @@ func TestEncolar(t *testing.T) {
 	}
 }
 
+func TestEncolarDosElementos(t *testing.T) {
+	heap := cola_prioridad.CrearHeap(cmpInt)
+	heap.Encolar(5)
+	heap.Encolar(3)
+	if heap.EstaVacia() {
+		t.Errorf("Se esperaba que el heap no estuviera vacío")
+	}
+	if heap.VerMax() != 5 {
+		t.Errorf("Se esperaba que el elemento prioritario fuera 5, pero fue %d", heap.VerMax())
+	}
+}
+
 func TestDesencolar(t *testing.T) {
 	heap := cola_prioridad.CrearHeap(cmpInt)
 	heap.Encolar(5)
@@ -54,11 +71,11 @@ func TestDesencolar(t *testing.T) {
 
 func TestHeapSort(t *testing.T) {
 	elementos := []int{5, 1, 10, 3, 2}
-	ordenado := cola_prioridad.HeapSort(elementos, cmpInt)
+	ordenados := cola_prioridad.HeapSort(elementos, cmpInt)
 	esperado := []int{1, 2, 3, 5, 10}
-	for i, v := range ordenado {
+	for i, v := range ordenados {
 		if v != esperado[i] {
-			t.Errorf("Se esperaba que ordenado[%d] sea %d, dio %d", i, esperado[i], v)
+			t.Errorf("Se esperaba %d en la posición %d, pero fue %d", esperado[i], i, v)
 		}
 	}
 }
