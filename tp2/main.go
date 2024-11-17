@@ -42,6 +42,21 @@ func main() {
 }
 
 func agregar_archivo(ruta_archivo string) {
+	lineas := procesar_archivo(ruta_archivo)
+	busquedaDOS(lineas)
+	fmt.Println("OK")
+}
+
+func ver_visitantes(desde string, hasta string) {
+	
+}
+
+func ver_mas_visitados(n int) {
+	//Implementar despues
+}
+
+// Aux
+func procesar_archivo(ruta_archivo string) []lineaLog {
 	archivo, err := os.Open(ruta_archivo)
 	defer archivo.Close()
 	var lineas []lineaLog
@@ -51,19 +66,8 @@ func agregar_archivo(ruta_archivo string) {
 		nueva_entrada := procesar_linea(linea) // Convierte a la linea en el struct
 		lineas = append(lineas, nueva_entrada)
 	}
-	busquedaDOS(lineas)
-	fmt.Println("OK")
+	return lineas
 }
-
-func ver_visitantes(desde string, hasta string) {
-
-}
-
-func ver_mas_visitados(n int) {
-	//Implementar despues
-}
-
-// Aux
 
 func procesar_linea(linea string) lineaLog {
 	palabras := strings.Fields(linea)
@@ -107,7 +111,7 @@ func busquedaDOS(lineas []lineaLog) {
 		return true
 	})
 }
-
+// Para poder comparar numericamente las IPs
 func ipAInt(ip string) uint32 {
 	var resultado uint32
 	partes := strings.Split(ip, ".")
@@ -117,7 +121,7 @@ func ipAInt(ip string) uint32 {
 	}
 	return resultado
 }
-
+// Para imprimir las IPs en su formato original
 func intAIP(ip uint32) string {
 	return fmt.Sprintf("%d.%d.%d.%d", byte(ip>>24), byte(ip>>16), byte(ip>>8), byte(ip))
 }
