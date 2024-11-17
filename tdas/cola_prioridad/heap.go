@@ -1,7 +1,7 @@
 package cola_prioridad
 
 const (
-	CAPACIDAD          = 10
+	CAPACIDAD_INICIAL = 10
 	FACTOR_REDIMENSION = 2
 	LIMITE_REDIMENSION = 4
 )
