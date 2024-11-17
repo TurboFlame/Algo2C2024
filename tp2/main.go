@@ -17,6 +17,7 @@ const (
 	NUMERO_DOS = 5
 )
 
+// Creo el struct para manejar mas facilmente las lineas de un archivo log
 type lineaLog struct {
 	IP    string
 	fecha time.Time
@@ -55,6 +56,7 @@ func agregar_archivo(ruta_archivo string) {
 }
 
 func ver_visitantes(desde string, hasta string) {
+
 }
 
 func ver_mas_visitados(n int) {
