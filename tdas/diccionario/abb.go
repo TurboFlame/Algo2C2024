@@ -21,11 +21,9 @@ func CrearABB[K comparable, V any](funcionCmp funcComparacion[K]) DiccionarioOrd
 	nuevoAbb := abb[K, V]{cantidad: 0, comp: funcionCmp, raiz: nil}
 	return &nuevoAbb
 }
-func crearNodoABB[K comparable, V any]() *nodoAbb[K, V] {
-
-	return &nodoAbb[K, V]{}
+func crearNodoABB[K comparable, V any](clave K, dato V) *nodoAbb[K, V] {
+	return &nodoAbb[K, V]{clave: clave, dato: dato}
 }
-
 func buscar[K comparable, V any](ab **nodoAbb[K, V], comp funcComparacion[K], clave K) **nodoAbb[K, V] {
 	if *ab == nil || comp(clave, (*ab).clave) == 0 {
 		return ab
@@ -41,9 +39,10 @@ func (dic *abb[K, V]) Guardar(clave K, dato V) {
 	nodo := buscar[K, V](&dic.raiz, dic.comp, clave)
 	if *nodo == nil {
 		dic.cantidad++
-		*nodo = crearNodoABB[K, V]()
+		*nodo = crearNodoABB[K, V](clave, dato)
+	} else {
+		(*nodo).clave, (*nodo).dato = clave, dato
 	}
-	(*nodo).dato, (*nodo).clave = dato, clave
 }
 
 func (dic *abb[K, V]) Borrar(clave K) V {
@@ -116,8 +115,6 @@ func (abb *nodoAbb[K, V]) iterarArbol(comp funcComparacion[K], min *K, max *K, v
 	return abb.izq.iterarArbol(comp, min, max, visitar) && visitar(abb.clave, abb.dato) && abb.der.iterarArbol(comp, min, max, visitar) //Recorrido inorder que se detiene al encontrar un false
 }
 
-// PROBLEMA IDENTIFICADO ITERAR. Cuando la clave es mayor al maximo, en lugar de revisar sus menores, el in order traversal se detiene.
-// Por lo tanto, deja elementos sin revisar.
 func (dic *abb[K, V]) IterarRango(desde *K, hasta *K, visitar func(clave K, dato V) bool) {
 	dic.raiz.iterarArbol(dic.comp, desde, hasta, visitar)
 }

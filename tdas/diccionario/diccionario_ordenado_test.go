@@ -221,23 +221,13 @@ func TestIteradorInternoClavesDiccionarioOrdenado(t *testing.T) {
 	dic.Guardar(claves[1], nil)
 	dic.Guardar(claves[2], nil)
 
-	cs := []string{"", "", ""}
 	cantidad := 0
-	cantPtr := &cantidad
-
 	dic.Iterar(func(clave string, dato *int) bool {
-		cs[cantidad] = clave
-		*cantPtr = *cantPtr + 1
+		require.EqualValues(t, claves[cantidad], clave) //Requiere que las claves se iteren en el orden Gato-Perro-Vaca
+		cantidad++
 		return true
 	})
-
-	require.EqualValues(t, 3, cantidad)
-	require.NotEqualValues(t, -1, buscarClave(cs[0], claves))
-	require.NotEqualValues(t, -1, buscarClave(cs[1], claves))
-	require.NotEqualValues(t, -1, buscarClave(cs[2], claves))
-	require.NotEqualValues(t, cs[0], cs[1])
-	require.NotEqualValues(t, cs[0], cs[2])
-	require.NotEqualValues(t, cs[2], cs[1])
+	require.EqualValues(t, 3, cantidad, "El iterador no itero una vez por elemento")
 }
 func TestIteradorInternoValoresDiccionarioOrdenado(t *testing.T) {
 	t.Log("Valida que los datos sean recorridas correctamente (y una única vez) con el iterador interno")
@@ -300,7 +290,7 @@ func TestIterarDiccionarioOrdenadoVacio(t *testing.T) {
 	require.PanicsWithValue(t, "El iterador termino de iterar", func() { iter.Siguiente() })
 }
 func TestDiccionarioOrdenadoIterar(t *testing.T) {
-	t.Log("Guardamos 3 valores en un Diccionario, e iteramos validando que las claves sean todas diferentes " +
+	t.Log("Guardamos 3 valores en un Diccionario, e iteramos validando que las claves se iteren de forma ordenada y sean todas diferentes " +
 		"pero pertenecientes al diccionario. Además los valores de VerActual y Siguiente van siendo correctos entre sí")
 
 	clave1 := "Gato"
@@ -311,6 +301,7 @@ func TestDiccionarioOrdenadoIterar(t *testing.T) {
 	valor3 := "moo"
 	claves := []string{clave1, clave2, clave3}
 	valores := []string{valor1, valor2, valor3}
+
 	dic := TDADiccionario.CrearABB[string, string](strings.Compare)
 	dic.Guardar(claves[0], valores[0])
 	dic.Guardar(claves[1], valores[1])
@@ -318,19 +309,19 @@ func TestDiccionarioOrdenadoIterar(t *testing.T) {
 	iter := dic.Iterador()
 	require.True(t, iter.HaySiguiente())
 	primero, _ := iter.VerActual()
-	require.NotEqualValues(t, -1, buscarClave(primero, claves))
+	require.EqualValues(t, claves[0], primero)
 
 	iter.Siguiente()
 	segundo, segundo_valor := iter.VerActual()
-	require.NotEqualValues(t, -1, buscarClave(segundo, claves))
-	require.EqualValues(t, valores[buscarClave(segundo, claves)], segundo_valor)
+	require.EqualValues(t, claves[1], segundo)
+	require.EqualValues(t, valores[1], segundo_valor)
 	require.NotEqualValues(t, primero, segundo)
 	require.True(t, iter.HaySiguiente())
 
 	iter.Siguiente()
 	require.True(t, iter.HaySiguiente())
 	tercero, _ := iter.VerActual()
-	require.NotEqualValues(t, -1, buscarClave(tercero, claves))
+	require.EqualValues(t, clave3, tercero)
 	require.NotEqualValues(t, primero, tercero)
 	require.NotEqualValues(t, segundo, tercero)
 	iter.Siguiente()
@@ -361,9 +352,10 @@ func TestIteradorNoLlegaAlFinalDiccionarioOrdenado(t *testing.T) {
 	require.NotEqualValues(t, primero, segundo)
 	require.NotEqualValues(t, tercero, segundo)
 	require.NotEqualValues(t, primero, tercero)
-	require.NotEqualValues(t, -1, buscarClave(primero, claves))
-	require.NotEqualValues(t, -1, buscarClave(segundo, claves))
-	require.NotEqualValues(t, -1, buscarClave(tercero, claves))
+
+	require.EqualValues(t, claves[0], primero)
+	require.EqualValues(t, claves[1], segundo)
+	require.EqualValues(t, claves[2], tercero)
 }
 func BenchmarkDiccionarioOrdenado(b *testing.B) {
 	b.Log("Prueba de stress del Diccionario ordenado. Prueba guardando distinta cantidad de elementos (muy grandes), " +
@@ -431,10 +423,10 @@ func TestVolumenIteradorCorteDiccionarioOrdenado(t *testing.T) {
 		" la iteración con la función visitar, se corte")
 
 	dic := TDADiccionario.CrearABB[int, int](compInt)
-
-	/* Inserta 'n' parejas en el funcionHash */
-	for i := 0; i < 10000; i++ {
-		dic.Guardar(i, i)
+	rango := 10000
+	for i := 0; i < rango; i++ {
+		intAleatorio := rand.Intn(rango)
+		dic.Guardar(intAleatorio, intAleatorio)
 	}
 
 	seguirEjecutando := true
