@@ -1,6 +1,6 @@
 module dc
 
-go 1.22.0
+go 1.22
 
 replace tdas => ../tdas
 
