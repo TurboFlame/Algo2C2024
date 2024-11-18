@@ -1,7 +1,7 @@
 package cola_prioridad
 
 const (
-	CAPACIDAD_INICIAL = 10
+	CAPACIDAD_INICIAL  = 10
 	FACTOR_REDIMENSION = 2
 	LIMITE_REDIMENSION = 4
 )
@@ -15,7 +15,7 @@ type heap[T comparable] struct {
 }
 
 func CrearHeap[T comparable](funcion_cmp func(T, T) int) ColaPrioridad[T] {
-	return &heap[T]{datos: make([]T, 0, CAPACIDAD), cantidad: 0, cmp: funcion_cmp}
+	return &heap[T]{datos: make([]T, 0, CAPACIDAD_INICIAL), cantidad: 0, cmp: funcion_cmp}
 }
 
 func CrearHeapArr[T comparable](arreglo []T, funcion_cmp func(T, T) int) ColaPrioridad[T] {
@@ -91,7 +91,7 @@ func upHeap[T any](arr []T, pos_hijo int, cmp func(T, T) int) {
 	pos_padre := (pos_hijo - 1) / 2
 	if cmp(arr[pos_padre], arr[pos_hijo]) < 0 {
 		arr[pos_padre], arr[pos_hijo] = arr[pos_hijo], arr[pos_padre]
-		upHeap(arr, pos_padre, cmp)
+		upHeap[T](arr, pos_padre, cmp)
 	}
 }
 
