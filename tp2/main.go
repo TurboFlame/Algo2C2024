@@ -11,6 +11,7 @@ Cambiar separar tokens para hacer que la funcion reciba el separador y hacerla u
 */
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -65,7 +66,11 @@ func procesarEntrada(argumentos cola.Cola[string], cantArgumentos int, miPaquete
 	switch {
 	case entrada == "agregar_archivo" && cantArgumentos == CANT_ARGUMENTOS_AGREGAR_ARCHIVO:
 		ruta_log := argumentos.Desencolar()
-		agregar_archivo(ruta_log, miPaquete)
+		err := agregar_archivo(ruta_log, miPaquete)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error en comando %s\n", entrada)
+			return false
+		}
 	case entrada == "ver_visitantes" && cantArgumentos == CANT_ARGUMENTOS_VER_VISITANTES:
 		desde := argumentos.Desencolar()
 		hasta := argumentos.Desencolar()
@@ -89,10 +94,10 @@ func intentarDesencolar(cola cola.Cola[string], err error) (string, error) {
 	return "", err
 }
 
-func agregar_archivo(ruta_archivo string, miPaquete *paquete) {
+func agregar_archivo(ruta_archivo string, miPaquete *paquete) error {
 	dictDDOS := diccionario.CrearHash[string, []time.Time]()
 
-	iterarArchivoYAplicar(ruta_archivo, func(lineaTexto string) error {
+	err := iterarArchivoYAplicar(ruta_archivo, func(lineaTexto string) error {
 
 		var lista []time.Time
 		linea := procesar_linea(lineaTexto)
@@ -114,9 +119,12 @@ func agregar_archivo(ruta_archivo string, miPaquete *paquete) {
 
 		return nil
 	})
-
+	if err != nil {
+		return err
+	}
 	busquedaDOS(dictDDOS)
 	fmt.Println("OK")
+	return nil
 }
 
 func ver_visitantes(desde string, hasta string, miPaquete *paquete) {
@@ -149,19 +157,20 @@ func ver_mas_visitados(cuantos int, miPaquete *paquete) {
 	fmt.Println("OK")
 }
 
-func iterarArchivoYAplicar(ruta_archivo string, funcionAplicada func(cadena string) error) {
+func iterarArchivoYAplicar(ruta_archivo string, funcionAplicada func(cadena string) error) error {
 	archivo, err := os.Open(ruta_archivo)
 	if err != nil {
-		panic("Error al abrir el archivo")
+		return errors.New("Error al abrir archivo " + ruta_archivo)
 	}
 	defer archivo.Close()
 	s := bufio.NewScanner(archivo)
 	for s.Scan() {
 		err := funcionAplicada(s.Text())
 		if err != nil {
-			panic("Error en interpretacion de una linea")
+			return errors.New("Error al interpretar archivo " + ruta_archivo)
 		}
 	}
+	return nil
 }
 
 func procesar_linea(linea string) lineaLog {
