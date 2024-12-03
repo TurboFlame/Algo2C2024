@@ -22,8 +22,11 @@ import (
 )
 
 const (
-	TIEMPO_DOS = 2 * time.Second
-	NUMERO_DOS = 5
+	TIEMPO_DOS                        = 2 * time.Second
+	NUMERO_DOS                        = 5
+	CANT_ARGUMENTOS_AGREGAR_ARCHIVO   = 2
+	CANT_ARGUMENTOS_VER_VISITANTES    = 3
+	CANT_ARGUMENTOS_VER_MAS_VISITADOS = 2
 )
 
 // Creo el struct para manejar mas facilmente las lineas de un archivo log
@@ -37,7 +40,7 @@ type paquete struct {
 	visitados  diccionario.Diccionario[string, uint]
 	visitantes diccionario.DiccionarioOrdenado[string, int]
 }
-type duo struct {
+type cantidadURL struct {
 	URL      string
 	cantidad uint
 }
@@ -51,32 +54,39 @@ func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	entradaValida := true
 	for scanner.Scan() && entradaValida {
-		entradaValida = procesarEntrada(separarTokens(scanner.Text()), &miPaquete)
+		argumentos, cantArgumentos := separarTokens(scanner.Text())
+		entradaValida = procesarEntrada(argumentos, cantArgumentos, &miPaquete)
 	}
 }
 
-func procesarEntrada(argumentos cola.Cola[string], miPaquete *paquete) bool {
+func procesarEntrada(argumentos cola.Cola[string], cantArgumentos int, miPaquete *paquete) bool {
 
-	switch argumentos.Desencolar() {
-	case "agregar_archivo":
+	entrada := argumentos.Desencolar()
+	switch {
+	case entrada == "agregar_archivo" && cantArgumentos == CANT_ARGUMENTOS_AGREGAR_ARCHIVO:
 		ruta_log := argumentos.Desencolar()
 		agregar_archivo(ruta_log, miPaquete)
-	case "ver_visitantes":
+	case entrada == "ver_visitantes" && cantArgumentos == CANT_ARGUMENTOS_VER_VISITANTES:
 		desde := argumentos.Desencolar()
 		hasta := argumentos.Desencolar()
 		ver_visitantes(desde, hasta, miPaquete)
-	case "ver_mas_visitados":
+	case entrada == "ver_mas_visitados" && cantArgumentos == CANT_ARGUMENTOS_VER_MAS_VISITADOS:
 		n, err := strconv.Atoi(argumentos.Desencolar())
 		if err != nil {
 			panic("Error de conversion")
 		}
 		ver_mas_visitados(n, miPaquete)
 	default:
-		fmt.Fprintf(os.Stderr, "Error en comando: %s\n", argumentos)
-		fmt.Println("Error ejecutado")
+		fmt.Fprintf(os.Stderr, "Error en comando %s\n", entrada)
 		return false
 	}
 	return true
+}
+func intentarDesencolar(cola cola.Cola[string], err error) (string, error) {
+	if cola.EstaVacia() {
+		return cola.Desencolar(), nil
+	}
+	return "", err
 }
 
 func agregar_archivo(ruta_archivo string, miPaquete *paquete) {
@@ -120,14 +130,14 @@ func ver_visitantes(desde string, hasta string, miPaquete *paquete) {
 }
 
 func ver_mas_visitados(cuantos int, miPaquete *paquete) {
-	visitados := make([]duo, miPaquete.visitados.Cantidad())
+	visitados := make([]cantidadURL, miPaquete.visitados.Cantidad())
 	contador := 0
 	miPaquete.visitados.Iterar(func(clave string, dato uint) bool {
-		visitados[contador] = duo{URL: clave, cantidad: dato}
+		visitados[contador] = cantidadURL{URL: clave, cantidad: dato}
 		contador++
 		return true
 	})
-	heapVisitados := cola_prioridad.CrearHeapArr(visitados, compDuo)
+	heapVisitados := cola_prioridad.CrearHeapArr(visitados, compURL)
 
 	contador = 0
 	fmt.Println("Sitios más visitados:")
@@ -159,13 +169,14 @@ func procesar_linea(linea string) lineaLog {
 	ip := palabras[0]
 	fecha := palabras[1]
 	URL := palabras[3]
-	fecha_parseada, _ := time.Parse("2006-01-02T15:04:05", fecha)
+	fecha_parseada, _ := time.Parse("2006-01-02T15:04:05-07:00", fecha)
 	linea_log := lineaLog{ip, fecha_parseada, URL}
 	return linea_log
 }
 
 func busquedaDOS(dict diccionario.Diccionario[string, []time.Time]) {
 	slice := make([]string, 0)
+
 	dict.Iterar(func(ip string, tiempos []time.Time) bool {
 		for i := NUMERO_DOS - 1; i < len(tiempos); i++ {
 			if tiempos[i].Sub(tiempos[i-(NUMERO_DOS-1)]) < TIEMPO_DOS { // Chequeo tiempos en grupos de 5
@@ -197,7 +208,7 @@ func compIpMin(a, b string) int {
 func compIpMax(a, b string) int {
 	return compIp(a, b, func(a, b int) int { return a - b })
 }
-func compDuo(a, b duo) int { return int(a.cantidad) - int(b.cantidad) }
+func compURL(a, b cantidadURL) int { return int(a.cantidad) - int(b.cantidad) }
 
 func separarTokensIp(ip string) []int {
 	slice := make([]int, 4)
@@ -210,19 +221,21 @@ func separarTokensIp(ip string) []int {
 	}
 	return slice
 }
-func separarTokens(cadena string) cola.Cola[string] {
+func separarTokens(cadena string) (cola.Cola[string], int) {
 	colaStrings := cola.CrearColaEnlazada[string]()
 	cadena += " " //Se agrega un espacio al final de la cadena para asegurarse que no queden elementos residuales en temp.
 	temp := ""
+	contador := 0
 	for _, caracter := range cadena {
 		if caracter == ' ' && temp != "" {
 			colaStrings.Encolar(temp)
 			temp = ""
+			contador++
 		} else if string(caracter) != " " {
 			temp += string(caracter)
 		}
 	}
-	return colaStrings
+	return colaStrings, contador
 }
 
 // Aux
