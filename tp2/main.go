@@ -1,12 +1,5 @@
 package main
 
-/*
-ANOTACIONES
-Mejorar funcion anonima agregar archivo
-Cambiar separar tokens para hacer que la funcion reciba el separador y hacerla universal unificando separartok y separartokip
-Manejar error ip invalida
-usar separarTokens en compIP
-*/
 import (
 	"bufio"
 	"errors"
@@ -27,6 +20,9 @@ const (
 	CANT_ARGUMENTOS_VER_VISITANTES    = 3
 	CANT_ARGUMENTOS_VER_MAS_VISITADOS = 2
 	CAMPOS_IP                         = 4
+	SEPARADOR_ESPACIO                 = ' '
+	SEPARADOR_IP                      = '.'
+	CANT_CAMPOS_LINEA                 = 4
 )
 
 // Creo el struct para manejar mas facilmente las lineas de un archivo log
@@ -54,7 +50,7 @@ func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	entradaValida := true
 	for scanner.Scan() && entradaValida {
-		argumentos, cantArgumentos := separarTokens(scanner.Text(), ' ')
+		argumentos, cantArgumentos := separarTokens(scanner.Text(), SEPARADOR_ESPACIO)
 		entradaValida = procesarEntrada(argumentos, cantArgumentos, &miPaquete)
 	}
 }
@@ -87,11 +83,29 @@ func procesarEntrada(argumentos cola.Cola[string], cantArgumentos int, miPaquete
 	}
 	return true
 }
+func procesarLinea(linea string) (lineaLog, error) {
+	palabras := strings.Fields(linea)
+	if len(palabras) != CANT_CAMPOS_LINEA {
+		return lineaLog{}, errors.New("Error, cantidad incorrecta de parametros")
+	}
+	ip := palabras[0]
+	if !ipEsValida(ip) {
+		return lineaLog{}, errors.New("Error al procesar IP")
+	}
+
+	fecha := palabras[1]
+	URL := palabras[3]
+	fechaParseada, err := time.Parse("2006-01-02T15:04:05-07:00", fecha)
+	lineaLog := lineaLog{ip, fechaParseada, URL}
+	return lineaLog, err
+}
 func agregarArchivo(rutaArchivo string, miPaquete *paquete) error {
 	dictDOS := diccionario.CrearHash[string, []time.Time]()
 	err := iterarArchivoYAplicar(rutaArchivo, func(lineaTexto string) error {
-
-		linea := procesarLinea(lineaTexto)
+		linea, errLinea := procesarLinea(lineaTexto)
+		if errLinea != nil {
+			return errLinea
+		}
 		//Si la clave pertenece, carga el arreglo con linea.fecha como unico elemento. Sino, utiliza un append y agrega linea.fecha al final de la lista.
 		set[string, []time.Time](dictDOS, linea.IP, []time.Time{linea.fecha}, func(lista []time.Time) []time.Time { return append(lista, linea.fecha) })
 		set[string, uint](miPaquete.visitados, linea.URL, 1, func(num uint) uint { return num + 1 })
@@ -145,43 +159,35 @@ func verMasVisitados(cuantos int, miPaquete *paquete) {
 
 func iterarArchivoYAplicar(rutaArchivo string, funcionAplicada func(cadena string) error) error {
 	archivo, err := os.Open(rutaArchivo)
+	defer archivo.Close()
 	if err != nil {
 		return errors.New("Error al abrir archivo " + rutaArchivo)
 	}
-	defer archivo.Close()
 	s := bufio.NewScanner(archivo)
 	for s.Scan() {
 		err := funcionAplicada(s.Text())
 		if err != nil {
-			return errors.New("Error al interpretar archivo " + rutaArchivo)
+			return err
 		}
 	}
 	return nil
 }
 
-func procesarLinea(linea string) lineaLog {
-	palabras := strings.Fields(linea)
-	ip := palabras[0]
-	fecha := palabras[1]
-	URL := palabras[3]
-	fechaParseada, _ := time.Parse("2006-01-02T15:04:05-07:00", fecha)
-	lineaLog := lineaLog{ip, fechaParseada, URL}
-	return lineaLog
-}
-
 func busquedaDOS(dict diccionario.Diccionario[string, []time.Time]) {
-	slice := make([]string, 0)
+	detecciones := make([]string, 0)
 
+	//Recibe un diccionario con todas las IPs y una lista de la hora de cada una de sus requests.
+	//Cuando encuentra cinco requests hechas en menos de dos segundos, agrega
 	dict.Iterar(func(ip string, tiempos []time.Time) bool {
 		for i := CANT_MAX_REQUESTS - 1; i < len(tiempos); i++ {
 			if tiempos[i].Sub(tiempos[i-(CANT_MAX_REQUESTS-1)]) < TIEMPO_MAXIMO_REQUESTS { // Chequeo tiempos en grupos de 5
-				slice = append(slice, ip)
+				detecciones = append(detecciones, ip)
 				break
 			}
 		}
 		return true
 	})
-	heap := cola_prioridad.CrearHeapArr(slice, compIpMin)
+	heap := cola_prioridad.CrearHeapArr(detecciones, compIpMin)
 	for !heap.EstaVacia() {
 		fmt.Printf("DoS: %s\n", heap.Desencolar())
 	}
@@ -213,8 +219,8 @@ func separarTokens(cadena string, separador rune) (cola.Cola[string], int) {
 }
 
 func compIp(a, b string, visitar func(a, b int) int) int {
-	colaA, tamA := separarTokens(a, '.')
-	colaB, tamB := separarTokens(b, '.')
+	colaA, tamA := separarTokens(a, SEPARADOR_IP)
+	colaB, tamB := separarTokens(b, SEPARADOR_IP)
 	if tamA != CAMPOS_IP || tamB != CAMPOS_IP {
 		panic("IP no valida (cantidad incorrecta de campos)")
 	}
@@ -229,4 +235,13 @@ func compIp(a, b string, visitar func(a, b int) int) int {
 		}
 	}
 	return 0
+}
+func ipEsValida(ip string) bool {
+	colaIp, largoIp := separarTokens(ip, SEPARADOR_IP)
+	for !colaIp.EstaVacia() {
+		if _, err := strconv.Atoi(colaIp.Desencolar()); err != nil {
+			return false
+		}
+	}
+	return largoIp == CAMPOS_IP
 }
