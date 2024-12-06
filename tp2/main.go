@@ -69,14 +69,16 @@ func procesarEntrada(argumentos cola.Cola[string], cantArgumentos int, miPaquete
 	case entrada == "ver_visitantes" && cantArgumentos == CANT_ARGUMENTOS_VER_VISITANTES:
 		desde := argumentos.Desencolar()
 		hasta := argumentos.Desencolar()
-		verVisitantes(desde, hasta, miPaquete)
+		visitantes := verVisitantes(desde, hasta, miPaquete)
+		imprimirVisitantes(visitantes)
 	case entrada == "ver_mas_visitados" && cantArgumentos == CANT_ARGUMENTOS_VER_MAS_VISITADOS:
 		n, err := strconv.Atoi(argumentos.Desencolar())
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error en comando %s\n", entrada)
 			return false
 		}
-		verMasVisitados(n, miPaquete)
+		visitados := verMasVisitados(n, miPaquete)
+		imprimirMasVisitados(visitados)
 	default:
 		fmt.Fprintf(os.Stderr, "Error en comando %s\n", entrada)
 		return false
@@ -116,8 +118,8 @@ func agregarArchivo(rutaArchivo string, miPaquete *paquete) error {
 	if err != nil {
 		return err
 	}
-	busquedaDOS(dictDOS)
-	fmt.Println("OK")
+	sospechosos := busquedaDOS(dictDOS)
+	imprimirDOS(sospechosos)
 	return nil
 }
 func set[K comparable, V any](dict diccionario.Diccionario[K, V], clave K, valorDefault V, visita func(V) V) {
@@ -127,17 +129,24 @@ func set[K comparable, V any](dict diccionario.Diccionario[K, V], clave K, valor
 		dict.Guardar(clave, valorDefault)
 	}
 }
-
-func verVisitantes(desde string, hasta string, miPaquete *paquete) {
-	fmt.Println("Visitantes:")
+func verVisitantes(desde string, hasta string, miPaquete *paquete) []string {
+	visitantes := make([]string, 0)
 	miPaquete.visitantes.IterarRango(&desde, &hasta, func(ip string, dato uint) bool {
-		fmt.Print("\t", ip, "\n")
+		visitantes = append(visitantes, ip)
 		return true
 	})
+	return visitantes
+}
+
+func imprimirVisitantes(visitantes []string) {
+	fmt.Println("Visitantes:")
+	for _, ip := range visitantes {
+		fmt.Printf("\t%s\n", ip)
+	}
 	fmt.Println("OK")
 }
 
-func verMasVisitados(cuantos int, miPaquete *paquete) {
+func verMasVisitados(cuantos int, miPaquete *paquete) []sitioYVisitas {
 	visitados := make([]sitioYVisitas, miPaquete.visitados.Cantidad())
 	contador := 0
 	miPaquete.visitados.Iterar(func(clave string, dato uint) bool {
@@ -145,14 +154,22 @@ func verMasVisitados(cuantos int, miPaquete *paquete) {
 		contador++
 		return true
 	})
-	heapVisitados := cola_prioridad.CrearHeapArr(visitados, compURL) //Ordeno con heapify para mantener la complejidad O(s)
+	heapVisitados := cola_prioridad.CrearHeapArr(visitados, compURL) // Ordeno con heapify para mantener la complejidad O(s)
 
+	resultado := make([]sitioYVisitas, 0, cuantos)
 	contador = 0
-	fmt.Println("Sitios más visitados:")
-	for contador < cuantos && !heapVisitados.EstaVacia() { //O(k(log(s)). K veces se utiliza desencolar en un heap de s elementos.
+	for contador < cuantos && !heapVisitados.EstaVacia() { // O(k(log(s)). K veces se utiliza desencolar en un heap de s elementos.
 		duo := heapVisitados.Desencolar()
-		fmt.Print("\t", duo.URL, " - ", duo.cantidad, "\n")
+		resultado = append(resultado, duo)
 		contador++
+	}
+	return resultado
+}
+
+func imprimirMasVisitados(sitios []sitioYVisitas) {
+	fmt.Println("Sitios más visitados:")
+	for _, sitio := range sitios {
+		fmt.Printf("\t%s - %d\n", sitio.URL, sitio.cantidad)
 	}
 	fmt.Println("OK")
 }
@@ -173,11 +190,11 @@ func iterarArchivoYAplicar(rutaArchivo string, funcionAplicada func(cadena strin
 	return nil
 }
 
-func busquedaDOS(dict diccionario.Diccionario[string, []time.Time]) {
+func busquedaDOS(dict diccionario.Diccionario[string, []time.Time]) []string {
 	detecciones := make([]string, 0)
 
-	//Recibe un diccionario con todas las IPs y una lista de la hora de cada una de sus requests.
-	//Cuando encuentra cinco requests hechas en menos de dos segundos, agrega
+	// Recibe un diccionario con todas las IPs y una lista de la hora de cada una de sus requests.
+	// Cuando encuentra cinco requests hechas en menos de dos segundos, agrega
 	dict.Iterar(func(ip string, tiempos []time.Time) bool {
 		for i := CANT_MAX_REQUESTS - 1; i < len(tiempos); i++ {
 			if tiempos[i].Sub(tiempos[i-(CANT_MAX_REQUESTS-1)]) < TIEMPO_MAXIMO_REQUESTS { // Chequeo tiempos en grupos de 5
@@ -187,11 +204,18 @@ func busquedaDOS(dict diccionario.Diccionario[string, []time.Time]) {
 		}
 		return true
 	})
+	return detecciones
+}
+
+func imprimirDOS(detecciones []string) {
 	heap := cola_prioridad.CrearHeapArr(detecciones, compIpMin)
 	for !heap.EstaVacia() {
 		fmt.Printf("DoS: %s\n", heap.Desencolar())
 	}
+	fmt.Println("OK")
 }
+
+
 
 func compURL(a, b sitioYVisitas) int { return int(a.cantidad) - int(b.cantidad) }
 
@@ -245,3 +269,4 @@ func ipEsValida(ip string) bool {
 	}
 	return largoIp == CAMPOS_IP
 }
+

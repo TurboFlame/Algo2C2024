@@ -20,6 +20,6 @@ for x in *.test; do
     echo ""
 done
 
-rm *_actual_out *_actual_err
+
 
 exit $RET
