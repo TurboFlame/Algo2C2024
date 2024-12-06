@@ -211,13 +211,50 @@ func busquedaDOS(dict diccionario.Diccionario[uint32, []time.Time]) []uint32 {
 		}
 		return true
 	})
+
+	// Verificar si detecciones no está vacío antes de ordenar
+	if len(detecciones) > 0 {
+		radixSortIPs(detecciones)
+	}
 	return detecciones
 }
 
+func radixSortIPs(ips []uint32) {
+	var bits = 8
+	var base uint32 = 1 << bits 
+	var filtro uint32 = base - 1
+
+	n := len(ips)
+	if n == 0 {
+		return
+	}
+
+	aux := make([]uint32, n)
+
+	for desplazamiento := 0; desplazamiento < 32; desplazamiento += bits {
+		conteo := make([]int, base)
+		for _, ip := range ips {
+			digito := (ip >> desplazamiento) & filtro
+			conteo[digito]++
+		}
+		if len(conteo) == 0 {
+			return
+		}
+		for i := 1; uint32(i) < base; i++ {
+			conteo[i] += conteo[i-1]
+		}
+		for i := n - 1; i >= 0; i-- {
+			digito := (ips[i] >> desplazamiento) & filtro
+			conteo[digito]--
+			aux[conteo[digito]] = ips[i]
+		}
+		copy(ips, aux)
+	}
+}
+
 func imprimirDOS(detecciones []uint32) {
-	heap := cola_prioridad.CrearHeapArr(detecciones, compIpMin)
-	for !heap.EstaVacia() {
-		fmt.Printf("DoS: %s\n", uint32AIP(heap.Desencolar()))
+	for _, ip := range detecciones {
+		fmt.Printf("DoS: %s\n", uint32AIP(ip))
 	}
 	fmt.Println("OK")
 }
@@ -225,21 +262,21 @@ func imprimirDOS(detecciones []uint32) {
 func compURL(a, b sitioYVisitas) int { return int(a.cantidad) - int(b.cantidad) }
 
 func compIpMin(a, b uint32) int {
-    if a < b {
-        return 1
-    } else if a > b {
-        return -1
-    }
-    return 0
+	if a < b {
+		return 1
+	} else if a > b {
+		return -1
+	}
+	return 0
 }
 
 func compIpMax(a, b uint32) int {
-    if a > b {
-        return 1
-    } else if a < b {
-        return -1
-    }
-    return 0
+	if a > b {
+		return 1
+	} else if a < b {
+		return -1
+	}
+	return 0
 }
 
 func ipAUint32(ip string) (uint32, error) {
@@ -250,7 +287,7 @@ func ipAUint32(ip string) (uint32, error) {
 	var ipNum uint32
 	for i := 0; i < 4; i++ {
 		parte, err := strconv.Atoi(partes[i])
-		if err != nil {
+		if err != nil || parte < 0 || parte > 255 {
 			return 0, errors.New("IP no valida")
 		}
 		ipNum = ipNum<<8 + uint32(parte)
@@ -283,4 +320,3 @@ func ipEsValida(ip string) bool {
 	_, err := ipAUint32(ip)
 	return err == nil
 }
-
