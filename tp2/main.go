@@ -221,7 +221,7 @@ func busquedaDOS(dict diccionario.Diccionario[uint32, []time.Time]) []uint32 {
 
 func radixSortIPs(ips []uint32) {
 	var bits = 8
-	var base uint32 = 1 << bits 
+	var base uint32 = 1 << bits
 	var filtro uint32 = base - 1
 
 	n := len(ips)
