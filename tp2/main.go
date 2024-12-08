@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -290,7 +291,9 @@ func ipAUint32(ip string) (uint32, error) {
 		if err != nil || parte < 0 || parte > 255 {
 			return 0, errors.New("IP no valida")
 		}
-		ipNum = ipNum<<8 + uint32(parte)
+
+		// Obtiene la version entera de la IP multiplicando cada parte por 256^3, 256^2, 256^1 y 256^0 respectivamente
+		ipNum += uint32(float64(parte) * math.Pow(256, float64(3-i)))
 	}
 	return ipNum, nil
 }
