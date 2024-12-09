@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -131,6 +130,8 @@ func agregarArchivo(rutaArchivo string, miPaquete *paquete) error {
 	return nil
 }
 
+
+
 func set[K comparable, V any](dict diccionario.Diccionario[K, V], clave K, valorDefault V, visita func(V) V) {
 	if dict.Pertenece(clave) {
 		dict.Guardar(clave, visita(dict.Obtener(clave)))
@@ -140,11 +141,12 @@ func set[K comparable, V any](dict diccionario.Diccionario[K, V], clave K, valor
 }
 
 func verVisitantes(desde string, hasta string, miPaquete *paquete) []IP {
-	desdeNum, _ := stringAIP(desde)
-	hastaNum, _ := stringAIP(hasta)
+	desdeIP, _ := stringAIP(desde)
+	hastaIP, _ := stringAIP(hasta)
 	visitantes := make([]IP, 0)
-	miPaquete.visitantes.IterarRango(&desdeNum, &hastaNum, func(ip IP, dato uint) bool {
+	miPaquete.visitantes.IterarRango(&desdeIP, &hastaIP, func(ip IP, dato uint) bool {
 		visitantes = append(visitantes, ip)
+		
 		return true
 	})
 	return visitantes
@@ -153,10 +155,12 @@ func verVisitantes(desde string, hasta string, miPaquete *paquete) []IP {
 func imprimirVisitantes(visitantes []IP) {
 	fmt.Println("Visitantes:")
 	for _, ip := range visitantes {
-		fmt.Printf("\t%s\n", uint32AIP(ip))
+		fmt.Printf("\t%s\n", ipAString(ip))
 	}
 	fmt.Println("OK")
 }
+
+
 
 func verMasVisitados(cuantos int, miPaquete *paquete) []sitioYVisitas {
 	visitados := make([]sitioYVisitas, miPaquete.visitados.Cantidad())
@@ -250,14 +254,28 @@ func radixSortIPs(ips []IP) {
 
 func imprimirDOS(detecciones []IP) {
 	for _, ip := range detecciones {
-		fmt.Printf("DoS: %s\n", uint32AIP(ip))
+		fmt.Printf("DoS: %s\n", ipAString(ip))
 	}
 	fmt.Println("OK")
 }
 
 func compURL(a, b sitioYVisitas) int { return int(a.cantidad) - int(b.cantidad) }
 
+
 func compIpMin(a, b IP) int {
+	if a.Parte1 != b.Parte1 {
+		return int(b.Parte1) - int(a.Parte1)
+	}
+	if a.Parte2 != b.Parte2 {
+		return int(b.Parte2) - int(a.Parte2)
+	}
+	if a.Parte3 != b.Parte3 {
+		return int(b.Parte3) - int(a.Parte3)
+	}
+	return int(b.Parte4) - int(a.Parte4)
+}
+
+func compIpMax(a, b IP) int {
 	if a.Parte1 != b.Parte1 {
 		return int(a.Parte1) - int(b.Parte1)
 	}
@@ -270,18 +288,6 @@ func compIpMin(a, b IP) int {
 	return int(a.Parte4) - int(b.Parte4)
 }
 
-func compIpMax(a, b IP) int {
-	if a.Parte1 != b.Parte1 {
-		return int(b.Parte1) - int(a.Parte1)
-	}
-	if a.Parte2 != b.Parte2 {
-		return int(b.Parte2) - int(a.Parte2)
-	}
-	if a.Parte3 != b.Parte3 {
-		return int(b.Parte3) - int(a.Parte3)
-	}
-	return int(b.Parte4) - int(a.Parte4)
-}
 
 func stringAIP(ip string) (IP, error) {
 	partes := strings.Split(ip, ".")
@@ -308,7 +314,7 @@ func stringAIP(ip string) (IP, error) {
 	return ipStruct, nil
 }
 
-func IPastring(ip IP) string {
+func ipAString(ip IP) string {
 	return fmt.Sprintf("%d.%d.%d.%d", ip.Parte1, ip.Parte2, ip.Parte3, ip.Parte4)
 }
 
@@ -333,3 +339,4 @@ func ipEsValida(ip string) bool {
 	_, err := stringAIP(ip)
 	return err == nil
 }
+
