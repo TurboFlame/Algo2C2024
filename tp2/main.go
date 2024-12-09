@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -250,7 +249,7 @@ func radixSortIPs(ips []IP) {
 
 func imprimirDOS(detecciones []IP) {
 	for _, ip := range detecciones {
-		fmt.Printf("DoS: %s\n", uint32AIP(ip))
+		fmt.Printf("DoS: %s\n", ipAString(ip))
 	}
 	fmt.Println("OK")
 }
@@ -308,7 +307,7 @@ func stringAIP(ip string) (IP, error) {
 	return ipStruct, nil
 }
 
-func IPastring(ip IP) string {
+func ipAString(ip IP) string {
 	return fmt.Sprintf("%d.%d.%d.%d", ip.Parte1, ip.Parte2, ip.Parte3, ip.Parte4)
 }
 
