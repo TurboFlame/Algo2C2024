@@ -28,14 +28,18 @@ const (
 
 // Creo el struct para manejar mas facilmente las lineas de un archivo log
 type lineaLog struct {
-	IP    uint32
+	IP    IP
 	fecha time.Time
 	URL   string
 }
 
+type IP struct {
+	Parte1, Parte2, Parte3, Parte4 uint8
+}
+
 type paquete struct {
 	visitados  diccionario.Diccionario[string, uint]
-	visitantes diccionario.DiccionarioOrdenado[uint32, uint]
+	visitantes diccionario.DiccionarioOrdenado[IP, uint]
 }
 type sitioYVisitas struct {
 	URL      string
@@ -43,7 +47,7 @@ type sitioYVisitas struct {
 }
 
 func crearPaquete() paquete {
-	return paquete{visitantes: diccionario.CrearABB[uint32, uint](compIpMax), visitados: diccionario.CrearHash[string, uint]()}
+	return paquete{visitantes: diccionario.CrearABB[IP, uint](compIpMax), visitados: diccionario.CrearHash[string, uint]()}
 }
 
 func main() {
@@ -93,7 +97,7 @@ func procesarLinea(linea string) (lineaLog, error) {
 		return lineaLog{}, errors.New("Error, cantidad incorrecta de parametros")
 	}
 	ip := palabras[0]
-	ipNum, err := ipAUint32(ip)
+	ipNum, err := stringAIP(ip)
 	if err != nil {
 		return lineaLog{}, errors.New("Error al procesar IP")
 	}
@@ -106,14 +110,14 @@ func procesarLinea(linea string) (lineaLog, error) {
 }
 
 func agregarArchivo(rutaArchivo string, miPaquete *paquete) error {
-	dictDOS := diccionario.CrearHash[uint32, []time.Time]()
+	dictDOS := diccionario.CrearHash[IP, []time.Time]()
 	err := iterarArchivoYAplicar(rutaArchivo, func(lineaTexto string) error {
 		linea, errLinea := procesarLinea(lineaTexto)
 		if errLinea != nil {
 			return errLinea
 		}
 		//Si la clave pertenece, carga el arreglo con linea.fecha como unico elemento. Sino, utiliza un append y agrega linea.fecha al final de la lista.
-		set[uint32, []time.Time](dictDOS, linea.IP, []time.Time{linea.fecha}, func(lista []time.Time) []time.Time { return append(lista, linea.fecha) })
+		set[IP, []time.Time](dictDOS, linea.IP, []time.Time{linea.fecha}, func(lista []time.Time) []time.Time { return append(lista, linea.fecha) })
 		set[string, uint](miPaquete.visitados, linea.URL, 1, func(num uint) uint { return num + 1 })
 		miPaquete.visitantes.Guardar(linea.IP, 0)
 		return nil
@@ -135,18 +139,18 @@ func set[K comparable, V any](dict diccionario.Diccionario[K, V], clave K, valor
 	}
 }
 
-func verVisitantes(desde string, hasta string, miPaquete *paquete) []uint32 {
-	desdeNum, _ := ipAUint32(desde)
-	hastaNum, _ := ipAUint32(hasta)
-	visitantes := make([]uint32, 0)
-	miPaquete.visitantes.IterarRango(&desdeNum, &hastaNum, func(ip uint32, dato uint) bool {
+func verVisitantes(desde string, hasta string, miPaquete *paquete) []IP {
+	desdeNum, _ := stringAIP(desde)
+	hastaNum, _ := stringAIP(hasta)
+	visitantes := make([]IP, 0)
+	miPaquete.visitantes.IterarRango(&desdeNum, &hastaNum, func(ip IP, dato uint) bool {
 		visitantes = append(visitantes, ip)
 		return true
 	})
 	return visitantes
 }
 
-func imprimirVisitantes(visitantes []uint32) {
+func imprimirVisitantes(visitantes []IP) {
 	fmt.Println("Visitantes:")
 	for _, ip := range visitantes {
 		fmt.Printf("\t%s\n", uint32AIP(ip))
@@ -198,12 +202,12 @@ func iterarArchivoYAplicar(rutaArchivo string, funcionAplicada func(cadena strin
 	return nil
 }
 
-func busquedaDOS(dict diccionario.Diccionario[uint32, []time.Time]) []uint32 {
-	detecciones := make([]uint32, 0)
+func busquedaDOS(dict diccionario.Diccionario[IP, []time.Time]) []IP {
+	detecciones := make([]IP, 0)
 
 	// Recibe un diccionario con todas las IPs y una lista de la hora de cada una de sus requests.
 	// Cuando encuentra cinco requests hechas en menos de dos segundos, agrega
-	dict.Iterar(func(ip uint32, tiempos []time.Time) bool {
+	dict.Iterar(func(ip IP, tiempos []time.Time) bool {
 		for i := CANT_MAX_REQUESTS - 1; i < len(tiempos); i++ {
 			if tiempos[i].Sub(tiempos[i-(CANT_MAX_REQUESTS-1)]) < TIEMPO_MAXIMO_REQUESTS { // Chequeo tiempos en grupos de 5
 				detecciones = append(detecciones, ip)
@@ -219,33 +223,24 @@ func busquedaDOS(dict diccionario.Diccionario[uint32, []time.Time]) []uint32 {
 	}
 	return detecciones
 }
-
-func radixSortIPs(ips []uint32) {
-	var bits = 8
-	var base uint32 = 1 << bits
-	var filtro uint32 = base - 1
-
+func radixSortIPs(ips []IP) {
 	n := len(ips)
 	if n == 0 {
 		return
 	}
 
-	aux := make([]uint32, n)
+	aux := make([]IP, n)
 
-	for desplazamiento := 0; desplazamiento < 32; desplazamiento += bits {
-		conteo := make([]int, base)
+	for _, parte := range []func(IP) uint8{func(ip IP) uint8 { return ip.Parte4 }, func(ip IP) uint8 { return ip.Parte3 }, func(ip IP) uint8 { return ip.Parte2 }, func(ip IP) uint8 { return ip.Parte1 }} {
+		conteo := make([]int, 256)
 		for _, ip := range ips {
-			digito := (ip >> desplazamiento) & filtro
-			conteo[digito]++
+			conteo[parte(ip)]++
 		}
-		if len(conteo) == 0 {
-			return
-		}
-		for i := 1; uint32(i) < base; i++ {
+		for i := 1; i < 256; i++ {
 			conteo[i] += conteo[i-1]
 		}
 		for i := n - 1; i >= 0; i-- {
-			digito := (ips[i] >> desplazamiento) & filtro
+			digito := parte(ips[i])
 			conteo[digito]--
 			aux[conteo[digito]] = ips[i]
 		}
@@ -253,7 +248,7 @@ func radixSortIPs(ips []uint32) {
 	}
 }
 
-func imprimirDOS(detecciones []uint32) {
+func imprimirDOS(detecciones []IP) {
 	for _, ip := range detecciones {
 		fmt.Printf("DoS: %s\n", uint32AIP(ip))
 	}
@@ -262,44 +257,59 @@ func imprimirDOS(detecciones []uint32) {
 
 func compURL(a, b sitioYVisitas) int { return int(a.cantidad) - int(b.cantidad) }
 
-func compIpMin(a, b uint32) int {
-	if a < b {
-		return 1
-	} else if a > b {
-		return -1
+func compIpMin(a, b IP) int {
+	if a.Parte1 != b.Parte1 {
+		return int(a.Parte1) - int(b.Parte1)
 	}
-	return 0
+	if a.Parte2 != b.Parte2 {
+		return int(a.Parte2) - int(b.Parte2)
+	}
+	if a.Parte3 != b.Parte3 {
+		return int(a.Parte3) - int(b.Parte3)
+	}
+	return int(a.Parte4) - int(b.Parte4)
 }
 
-func compIpMax(a, b uint32) int {
-	if a > b {
-		return 1
-	} else if a < b {
-		return -1
+func compIpMax(a, b IP) int {
+	if a.Parte1 != b.Parte1 {
+		return int(b.Parte1) - int(a.Parte1)
 	}
-	return 0
+	if a.Parte2 != b.Parte2 {
+		return int(b.Parte2) - int(a.Parte2)
+	}
+	if a.Parte3 != b.Parte3 {
+		return int(b.Parte3) - int(a.Parte3)
+	}
+	return int(b.Parte4) - int(a.Parte4)
 }
 
-func ipAUint32(ip string) (uint32, error) {
+func stringAIP(ip string) (IP, error) {
 	partes := strings.Split(ip, ".")
 	if len(partes) != 4 {
-		return 0, errors.New("IP no valida")
+		return IP{}, errors.New("IP no valida")
 	}
-	var ipNum uint32
+	var ipStruct IP
 	for i := 0; i < 4; i++ {
 		parte, err := strconv.Atoi(partes[i])
 		if err != nil || parte < 0 || parte > 255 {
-			return 0, errors.New("IP no valida")
+			return IP{}, errors.New("IP no valida")
 		}
-
-		// Obtiene la version entera de la IP multiplicando cada parte por 256^3, 256^2, 256^1 y 256^0 respectivamente
-		ipNum += uint32(float64(parte) * math.Pow(256, float64(3-i)))
+		switch i {
+		case 0:
+			ipStruct.Parte1 = uint8(parte)
+		case 1:
+			ipStruct.Parte2 = uint8(parte)
+		case 2:
+			ipStruct.Parte3 = uint8(parte)
+		case 3:
+			ipStruct.Parte4 = uint8(parte)
+		}
 	}
-	return ipNum, nil
+	return ipStruct, nil
 }
 
-func uint32AIP(ip uint32) string {
-	return fmt.Sprintf("%d.%d.%d.%d", byte(ip>>24), byte(ip>>16), byte(ip>>8), byte(ip))
+func IPastring(ip IP) string {
+	return fmt.Sprintf("%d.%d.%d.%d", ip.Parte1, ip.Parte2, ip.Parte3, ip.Parte4)
 }
 
 func separarTokens(cadena string, separador rune) (cola.Cola[string], int) {
@@ -320,6 +330,6 @@ func separarTokens(cadena string, separador rune) (cola.Cola[string], int) {
 }
 
 func ipEsValida(ip string) bool {
-	_, err := ipAUint32(ip)
+	_, err := stringAIP(ip)
 	return err == nil
 }
